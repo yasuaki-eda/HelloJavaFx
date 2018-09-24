@@ -2,3 +2,5 @@
 /.project
 /build.fxbuild
 /test.png
+src/
+.settings/
