@@ -3,9 +3,9 @@ package opencv;
 import java.io.ByteArrayInputStream;
 
 import org.opencv.core.Core;
-import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfByte;
+import org.opencv.core.Point;
 import org.opencv.imgcodecs.Imgcodecs;
 
 import javafx.application.Application;
@@ -13,7 +13,9 @@ import javafx.scene.Scene;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
 import javafx.stage.Stage;
+import util.UtilImage;
 
 public class TestOpenCv extends Application {
 
@@ -33,53 +35,109 @@ public class TestOpenCv extends Application {
 
   private Image createOpenCVImage() {
     Mat srcMat = Imgcodecs.imread(srcPath);
+    Mat dstMat = UtilImage.decreaseColorMat(srcMat);
+
+    Point start = makeRandomPoint(new Point(0, 0), new Point(dstMat.width(), dstMat.height()));
+    Point end = makeRandomPoint(new Point(0, 0), new Point(dstMat.width(), dstMat.height()));
+    Color color = makeRandomColor();
+    paintLine(dstMat, start, end, color);
+
+
+    for ( int i = 0; i < 1000 ; i++ ) {
+      start = makeRandomPoint(new Point(0, 0), new Point(dstMat.width(), dstMat.height()));
+      end = makeRandomPoint(new Point(0, 0), new Point(dstMat.width(), dstMat.height()));
+      color = makeRandomColor();
+      paintLine(dstMat, start, end, color);
+    }
+
+
     MatOfByte byteMat = new MatOfByte();
-    Imgcodecs.imencode(".bmp", decreaseColorMat(srcMat), byteMat);
-    Image img = new Image(new ByteArrayInputStream( byteMat.toArray() ), 256, 256, false, false);
+    Imgcodecs.imencode(".bmp", dstMat, byteMat);
+    Image img = new Image(new ByteArrayInputStream( byteMat.toArray() ), 512, 512, false, false);
     return img;
   }
 
-	/**
-	 * 減色画像を作成します。
-	 * CV_8UC3の値域は [-127,127]
-	 * 参考 : http://aidiary.hatenablog.com/entry/20091003/1254574041
-	 * @param src
-	 * @return
-	 */
-	public Mat decreaseColorMat(Mat src) {
+  /**
+   * ランダムな色を生成します。
+   * @return
+   */
+  public Color makeRandomColor() {
+    return Color.color(Math.random(), Math.random(), Math.random());
+  }
 
-		Mat dst = new Mat(src.width(), src.height(), CvType.CV_8UC3);
-		for ( int y = 0; y < dst.height(); y++ ) {
-		  for ( int x = 0; x < dst.width(); x++ ) {
-		    byte[] data = new byte[3];
-		    src.get(y,  x, data);
-		    data[0] = (byte)decreaseColor(data[0]);
-        data[1] = (byte)decreaseColor(data[1]);
-        data[2] = (byte)decreaseColor(data[2]);
-		    dst.put(y, x, data);
+  /**
+   * ランダムな点を出力します。
+   * @param min
+   * @param max
+   * @return
+   */
+  public Point makeRandomPoint(Point min, Point max) {
+    int x = (int) (Math.random() * (max.x - min.x) + min.x);
+    int y = (int) (Math.random() * (max.y - min.y) + min.y);
+    return new Point(x, y);
+  }
 
-		  }
-		}
-		return dst;
-	}
 
-	/**
-	 * 減色処理です
-   * CV_8UC3の値域は [-127,127]
-	 * @param val
-	 * @return
-	 */
-	public int decreaseColor(int val) {
-	  if ( val < -64 ) {
-	     return -96;
-	  } else if ( val < 0 ) {
-	     return -32;
-	  } else if ( val < 64 ) {
-	     return 32;
-	  } else {
-	    return 96;
-	  }
-	}
+  /**
+   * 画像に開始点-終了点までの線分を書き込みます。
+   * @param start
+   * @param end
+   * @param color
+   */
+  public void paintLine(Mat src, Point start, Point end, Color color) {
+
+    if ( end.x == start.x ) return;
+    double a = (end.y - start.y ) / (end.x - start.x);
+    double b = - a * start.x + start.y;
+    int blue = (byte) (color.getBlue() * 256 - 127);
+    int red = (byte) (color.getRed() * 256 - 127);
+    int green = (byte) (color.getGreen() * 256 - 127);
+    double minX = Math.min(start.x, end.x);
+    double minY = Math.min(start.y, end.y);
+    double maxX = Math.max(start.x, end.x);
+    double maxY = Math.max(start.y, end.y);
+
+    byte[] data = new byte[3];
+    for (int y = 0; y < src.height(); y++ ) {
+      for ( int x = 0; x < src.width(); x++ ) {
+
+        if ( x < minX || maxX < x || y < minY || maxY < y) {
+          continue;
+        }
+        if ( isOnLine(x, y, start, end, a, b) ) {
+          src.get(y,  x, data);
+          data[0] = (byte) (data[0] + blue);
+          data[0] = (byte) ((data[0] > 127) ? (data[0] - 256) : data[0]);
+          data[1] = (byte) (data[1] + green);
+          data[1] = (byte) ((data[1] > 127) ? (data[1] - 256) : data[1]);
+          data[2] = (byte) (data[2] + red);
+          data[2] = (byte) ((data[2] > 127) ? (data[2] - 256) : data[2]);
+          src.put(y, x, data);
+        }
+      }
+    }
+
+    return;
+  }
+
+  /**
+   * 座標(x, y)がStart-End線分上にあるかどうか判定します。
+   * 計算の簡略化のため、Start-Endの直線の傾きaと切片bは事前に計算しておきます。
+   * @param x
+   * @param y
+   * @param start : 起点
+   * @param end : 終点
+   * @param a : 傾き
+   * @param b : 切片
+   * @return
+   */
+  private boolean isOnLine(int x, int y, Point start, Point end, double a, double b) {
+    if ( ( a * x + b - 2 <= y ) && ( y <= a * x + b + 2 ) ) {
+      return true;
+    }
+    return false;
+  }
+
 
 
 	public static void main(String args[]) {
