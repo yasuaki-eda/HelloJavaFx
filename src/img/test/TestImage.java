@@ -1,4 +1,4 @@
-package image.test;
+package img.test;
 
 import java.io.File;
 
