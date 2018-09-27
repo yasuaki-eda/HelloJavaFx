@@ -31,11 +31,14 @@ abstract public class ImageViewApplication extends Application {
 	protected VBox vbox;
 	protected Scene scene;
 	protected Image fxImage;
+	private int fxImageWidth;
+  private int fxImageHeight;
 
 	/**
 	 * JavaFX.Applicationの関数
 	 */
 	public void start(Stage primaryStage) throws Exception{
+	  initImgViewApp();
 		vbox = new VBox();
 		fxImage = createFxImage();
 		imView = new ImageView(fxImage);
@@ -50,13 +53,21 @@ abstract public class ImageViewApplication extends Application {
 	 * @return
 	 */
 	protected Image createFxImage(){
-		setImagePath();
 		Mat srcMat = Imgcodecs.imread(imagePath);
 		Mat dstMat = createDstMat(srcMat);
 		MatOfByte byteMat = new MatOfByte();
 		Imgcodecs.imencode(".bmp", dstMat, byteMat);
-		Image img = new Image(new ByteArrayInputStream( byteMat.toArray() ), 256, 256, false, false);
+		Image img = new Image(new ByteArrayInputStream( byteMat.toArray() ), fxImageWidth, fxImageHeight, false, false);
 		return img;
+	}
+
+	/**
+	 * 初期化関数です
+	 */
+	protected void initImgViewApp(){
+    initImagePath();
+    initFxImageWidth();
+    initFxImageHeight();
 	}
 
 	/**
@@ -64,22 +75,49 @@ abstract public class ImageViewApplication extends Application {
 	 * @param src
 	 * @return
 	 */
-  abstract Mat createDstMat(Mat src);
+  abstract protected Mat createDstMat(Mat src);
 
   /**
    * パスを変えたい場合Overrideする
    */
-	protected void setImagePath(){
+	protected void initImagePath(){
 		imagePath = "./image/lena.jpg";
 	}
 
-	public static void main(String args[]) {
-		launch(args);
+  /**
+   * 表示サイズを変えたい場合Overrideする
+   */
+	protected void initFxImageWidth(){
+	  fxImageWidth = 256;
 	}
 
-	static{
+  /**
+   * 表示サイズを変えたい場合Overrideする
+   */
+  protected void initFxImageHeight(){
+    fxImageHeight = 256;
+  }
+
+  static{
 		System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
 	}
+
+  public int getFxImageWidth() {
+    return fxImageWidth;
+  }
+
+  public void setFxImageWidth(int fxImageWidth) {
+    this.fxImageWidth = fxImageWidth;
+  }
+
+  public int getFxImageHeight() {
+    return fxImageHeight;
+  }
+
+  public void setFxImageHeight(int fxImageHeight) {
+    this.fxImageHeight = fxImageHeight;
+  }
+
 
 
 }
