@@ -33,12 +33,8 @@ public class TestImage2 extends Application {
 
 	public void start(Stage primaryStage) throws Exception{
 		VBox vbox = new VBox();
-//		ImageView view = new ImageView(createImage());
 		ImageView view = new ImageView(createOpenCVImage());
 		vbox.getChildren().add(view);
-
-//		UtilFile.createTimestampDir(dstRootDir, "");
-
 		Scene scene = new Scene(vbox);
 		primaryStage.setScene(scene);
 		primaryStage.show();
@@ -54,39 +50,6 @@ public class TestImage2 extends Application {
 	}
 
 
-	/**
-	 * 描画する画像を生成します。
-	 * @return
-	 */
-	private Image createImage() {
-		Image img = new Image(new File(srcPath).toURI().toString(), 256, 256, false, false );
-		WritableImage viewImage = createReverseRGBImage(img);
-		return viewImage;
-	}
-
-
-	/**
-	 * RGBを入れ替えた画像を生成します。
-	 * @param img
-	 * @return
-	 */
-	private WritableImage createReverseRGBImage(Image img) {
-		WritableImage wImg = new WritableImage((int)img.getWidth(), (int)img.getHeight());
-
-		// pixcel単位の操作
-		PixelReader reader = img.getPixelReader();
-		PixelWriter writer = wImg.getPixelWriter();
-
-		for ( int x = 0; x < wImg.getWidth(); x++) {
-			for ( int y = 0; y < wImg.getHeight(); y++ ) {
-				int tmp = reader.getArgb(x, y);
-				int val = (tmp >> 8) | ( tmp << 16 );
-				writer.setArgb(x, y, val);
-			}
-		}
-		return wImg;
-	}
-
 
 	public static void main(String args[]) {
 		launch(args);
@@ -95,5 +58,39 @@ public class TestImage2 extends Application {
 	static{
     System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
 	}
+
+  /**
+   * 描画する画像を生成します。
+   * @return
+   */
+  private Image createImage() {
+    Image img = new Image(new File(srcPath).toURI().toString(), 256, 256, false, false );
+    WritableImage viewImage = createReverseRGBImage(img);
+    return viewImage;
+  }
+
+
+  /**
+   * RGBを入れ替えた画像を生成します。
+   * @param img
+   * @return
+   */
+  private WritableImage createReverseRGBImage(Image img) {
+    WritableImage wImg = new WritableImage((int)img.getWidth(), (int)img.getHeight());
+
+    // pixcel単位の操作
+    PixelReader reader = img.getPixelReader();
+    PixelWriter writer = wImg.getPixelWriter();
+
+    for ( int x = 0; x < wImg.getWidth(); x++) {
+      for ( int y = 0; y < wImg.getHeight(); y++ ) {
+        int tmp = reader.getArgb(x, y);
+        int val = (tmp >> 8) | ( tmp << 16 );
+        writer.setArgb(x, y, val);
+      }
+    }
+    return wImg;
+  }
+
 
 }

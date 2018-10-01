@@ -2,6 +2,8 @@ package util;
 
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.core.Point;
+import org.opencv.imgproc.Imgproc;
 
 /**
  * 画像処理Utilクラス
@@ -36,6 +38,24 @@ public class UtilImage {
     }
     return dst;
   }
+
+  /**
+   * 画像を回転拡縮します。回転の中心は画像の中心です。
+   * @param src   : 入力画像
+   * @param angle : 回転角(degree)
+   * @param size  : 拡大率
+   * @return
+   */
+  public static Mat rotateMatFromCenter(Mat src, double angle, double size) {
+    Mat rotMat = new Mat(2, 3, CvType.CV_32FC1 );
+    Mat dst = new Mat(src.rows(), src.cols(), src.type());
+    Point center = new Point(dst.cols()/2, dst.rows()/2);
+    if ( size < 0 ) size = 0;
+    rotMat = Imgproc.getRotationMatrix2D(center, angle, size);
+    Imgproc.warpAffine(src, dst, rotMat, dst.size());
+    return dst;
+  }
+
 
   /**
    * 減色処理です
