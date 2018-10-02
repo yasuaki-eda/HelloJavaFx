@@ -10,13 +10,20 @@ import org.opencv.core.MatOfByte;
 import org.opencv.imgcodecs.Imgcodecs;
 
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.concurrent.Task;
 import javafx.scene.Scene;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
+import util.UtilImage;
 
+/**
+ * 画像を連続回転します。
+ * @author Eda
+ *
+ */
 public class Animation extends Application {
 
   private String imagePath = "./image/lena.jpg";
@@ -38,12 +45,14 @@ public class Animation extends Application {
 
     // スレッドの設定
     es = Executors.newSingleThreadExecutor();
-
+    task = new ImageTask<Boolean>();
 
     vbox = new VBox();
-    imView = new ImageView(fxImage);
+    imView = new ImageView(createFxImage(src));
     vbox.getChildren().add(imView);
     scene = new Scene(vbox);
+
+    es.execute(task);
     primaryStage.setScene(scene);
     primaryStage.show();
   }
@@ -58,14 +67,14 @@ public class Animation extends Application {
     protected Boolean call() throws Exception {
 
       for ( int i = 0; i < loopNum; i++ ){
-
+        Mat dst = UtilImage.rotateMatFromCenter(src, i * 2, 1);
+        Platform.runLater(() -> imView.setImage(createFxImage(dst)));
+        Thread.sleep(100);
       }
 
       return true;
     }
   }
-
-
 
 
   /**
