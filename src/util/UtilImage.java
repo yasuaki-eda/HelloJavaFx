@@ -1,9 +1,15 @@
 package util;
 
+import java.io.ByteArrayInputStream;
+
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfByte;
 import org.opencv.core.Point;
+import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
+
+import javafx.scene.image.Image;
 
 /**
  * 画像処理Utilクラス
@@ -14,6 +20,18 @@ public class UtilImage {
 
   private UtilImage() {
   }
+
+  /**
+   * Mat ⇒ JavaFXのImageを生成
+   * @return
+   */
+  public static Image createFxImage(Mat srcMat, int fxImageWidth, int fxImageHeight){
+    MatOfByte byteMat = new MatOfByte();
+    Imgcodecs.imencode(".bmp", srcMat, byteMat);
+    Image img = new Image(new ByteArrayInputStream( byteMat.toArray() ), fxImageWidth, fxImageHeight, false, false);
+    return img;
+  }
+
 
   /**
    * 減色画像を作成します。

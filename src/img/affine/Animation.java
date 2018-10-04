@@ -1,12 +1,10 @@
 package img.affine;
 
-import java.io.ByteArrayInputStream;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import org.opencv.core.Core;
 import org.opencv.core.Mat;
-import org.opencv.core.MatOfByte;
 import org.opencv.imgcodecs.Imgcodecs;
 
 import javafx.application.Application;
@@ -48,7 +46,7 @@ public class Animation extends Application {
     task = new ImageTask<Boolean>();
 
     vbox = new VBox();
-    imView = new ImageView(createFxImage(src));
+    imView = new ImageView(UtilImage.createFxImage(src, fxImageWidth, fxImageHeight));
     vbox.getChildren().add(imView);
     scene = new Scene(vbox);
 
@@ -68,7 +66,7 @@ public class Animation extends Application {
 
       for ( int i = 0; i < loopNum; i++ ){
         Mat dst = UtilImage.rotateMatFromCenter(src, i * 2, 1);
-        Platform.runLater(() -> imView.setImage(createFxImage(dst)));
+        Platform.runLater(() -> imView.setImage(UtilImage.createFxImage(dst, fxImageWidth, fxImageHeight)));
         Thread.sleep(100);
       }
 
@@ -77,16 +75,6 @@ public class Animation extends Application {
   }
 
 
-  /**
-   * Mat ⇒ JavaFXのImageを生成
-   * @return
-   */
-  protected Image createFxImage(Mat srcMat){
-    MatOfByte byteMat = new MatOfByte();
-    Imgcodecs.imencode(".bmp", srcMat, byteMat);
-    Image img = new Image(new ByteArrayInputStream( byteMat.toArray() ), fxImageWidth, fxImageHeight, false, false);
-    return img;
-  }
 
   public static void main(String args[]){
     launch(args);
