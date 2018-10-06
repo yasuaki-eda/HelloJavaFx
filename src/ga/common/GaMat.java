@@ -26,6 +26,7 @@ public class GaMat implements Comparable<GaMat> {
   private static FeatureDetector detector = FeatureDetector.create(FeatureDetector.AKAZE);
   private static DescriptorExtractor executor = DescriptorExtractor.create(DescriptorExtractor.AKAZE);
   private double similarity = 0;
+  private double score;   // 集団の中におけるスコア(集団全体の合計が1になる)
 
   /**
    * コンストラクタ
@@ -95,10 +96,21 @@ public class GaMat implements Comparable<GaMat> {
     return this.img;
   }
 
+  /**
+   * similarityの昇順に並べる
+   */
   @Override
   public int compareTo(GaMat o) {
     if (o == null) return -1;
-    return (int) (this.similarity - o.similarity);
+    return (int) ( this.similarity -  o.similarity);
+  }
+
+  public double getScore() {
+    return score;
+  }
+
+  public void setScore(double score) {
+    this.score = score;
   }
 
 }

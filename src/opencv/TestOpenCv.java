@@ -37,15 +37,15 @@ public class TestOpenCv extends Application {
     Mat srcMat = Imgcodecs.imread(srcPath);
     Mat dstMat = UtilImage.decreaseColorMat(srcMat);
 
-    Point start = makeRandomPoint(new Point(0, 0), new Point(dstMat.width(), dstMat.height()));
-    Point end = makeRandomPoint(new Point(0, 0), new Point(dstMat.width(), dstMat.height()));
+    Point start = UtilImage.makeRandomPoint(new Point(0, 0), new Point(dstMat.width(), dstMat.height()));
+    Point end = UtilImage.makeRandomPoint(new Point(0, 0), new Point(dstMat.width(), dstMat.height()));
     Color color = makeRandomColor();
     paintLine(dstMat, start, end, color);
 
 
     for ( int i = 0; i < 1000 ; i++ ) {
-      start = makeRandomPoint(new Point(0, 0), new Point(dstMat.width(), dstMat.height()));
-      end = makeRandomPoint(new Point(0, 0), new Point(dstMat.width(), dstMat.height()));
+      start = UtilImage.makeRandomPoint(new Point(0, 0), new Point(dstMat.width(), dstMat.height()));
+      end = UtilImage.makeRandomPoint(new Point(0, 0), new Point(dstMat.width(), dstMat.height()));
       color = makeRandomColor();
       paintLine(dstMat, start, end, color);
     }
@@ -65,17 +65,6 @@ public class TestOpenCv extends Application {
     return Color.color(Math.random(), Math.random(), Math.random());
   }
 
-  /**
-   * ランダムな点を出力します。
-   * @param min
-   * @param max
-   * @return
-   */
-  public Point makeRandomPoint(Point min, Point max) {
-    int x = (int) (Math.random() * (max.x - min.x) + min.x);
-    int y = (int) (Math.random() * (max.y - min.y) + min.y);
-    return new Point(x, y);
-  }
 
 
   /**

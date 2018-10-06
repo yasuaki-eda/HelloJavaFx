@@ -6,6 +6,7 @@ import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfByte;
 import org.opencv.core.Point;
+import org.opencv.core.Scalar;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 
@@ -73,6 +74,41 @@ public class UtilImage {
     Imgproc.warpAffine(src, dst, rotMat, dst.size());
     return dst;
   }
+
+  /**
+   * ランダムな点を出力します。
+   * @param min
+   * @param max
+   * @return
+   */
+  public static Point makeRandomPoint(Point min, Point max) {
+    int x = (int) (Math.random() * (max.x - min.x) + min.x);
+    int y = (int) (Math.random() * (max.y - min.y) + min.y);
+    return new Point(x, y);
+  }
+
+  /**
+   * 中心点から指定した長さを越えないランダムな点を返します。
+   */
+  public static Point makeRandomPoint(Point center, double maxLength) {
+    double angle = Math.random() * 2 * Math.PI;
+    double length = Math.random() * maxLength;
+    int x = (int)( center.x + length * Math.cos(angle) );
+    int y = (int)( center.y + length * Math.sin(angle) );
+    return new Point(x, y);
+  }
+
+  /**
+   * ランダムな色を生成します。
+   * @return
+   */
+  public static Scalar makeRandomScalar() {
+    int blue = (int)(Math.random() * 255) - 128;
+    int green = (int)(Math.random() * 255) - 128;
+    int red = (int)(Math.random() * 255) - 128;
+    return new Scalar(blue, green, red);
+  }
+
 
 
   /**
