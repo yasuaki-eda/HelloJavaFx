@@ -1,4 +1,4 @@
-package img;
+package img.testga;
 
 import org.opencv.core.Mat;
 import org.opencv.core.Point;
@@ -9,7 +9,7 @@ import util.UtilImage;
 
 /**
  * ランダムな線を描画します。
- * TODO : 目標とする画像のヒストグラムと比較することで色を制限したい。
+ * 残課題 : 目標とする画像のヒストグラムと比較することで色を制限したい。
  * @author Eda
  *
  */
