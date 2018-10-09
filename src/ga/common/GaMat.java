@@ -27,6 +27,7 @@ public class GaMat implements Comparable<GaMat> {
   private static DescriptorExtractor executor = DescriptorExtractor.create(DescriptorExtractor.AKAZE);
   private double similarity = 0;
   private double score;   // 集団の中におけるスコア(集団全体の合計が1になる)
+  private static double LESS_MATCHES_PENALTY = 10000;
 
   /**
    * コンストラクタ
@@ -54,6 +55,7 @@ public class GaMat implements Comparable<GaMat> {
    * 参照画像との類似度を計算します。
    * 特徴量計算後に実行する必要があります。
    * 類似度Listは類似度が高い順にソートします。
+   * TODO : 色のヒストグラム類似度も導入する。
    * @param src
    */
   public void calcMatchesList(Mat descriptor1){
@@ -70,10 +72,22 @@ public class GaMat implements Comparable<GaMat> {
    */
   public void calcSimilarity(int lank){
     int num = Math.min(lank,  matchesList.size());
+
+    if ( num <= 0 ) {
+      similarity = 0;
+      return;
+    }
+
     for ( int i = 0; i < num; i++  ){
       similarity += matchesList.get(i).distance;
     }
-    similarity /= num;
+
+    // 特徴量が少ないとき、不足点に大きなコストを与える
+    if ( matchesList.size() < lank ) {
+      similarity += (lank - matchesList.size() ) * LESS_MATCHES_PENALTY;
+    }
+
+    similarity /= lank;
   }
 
   public double getSimilarity(){
@@ -102,7 +116,9 @@ public class GaMat implements Comparable<GaMat> {
   @Override
   public int compareTo(GaMat o) {
     if (o == null) return -1;
-    return (int) ( this.similarity -  o.similarity);
+    if ( this.similarity  < o.similarity ) return -1;
+    if ( o.similarity < this.similarity ) return 1;
+    return 0;
   }
 
   public double getScore() {

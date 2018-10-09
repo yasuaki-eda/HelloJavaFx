@@ -50,7 +50,7 @@ public class LineTest2 extends ImageViewApplication {
    * @param hist double[64] BGRは4階調ずつ
    * @return
    */
-  public static Scalar createRandomColorWithHistRate(double[] hist ) {
+  private  static Scalar createRandomColorWithHistRate(double[] hist ) {
 
     double rand = Math.random();
     int binNo = 0;

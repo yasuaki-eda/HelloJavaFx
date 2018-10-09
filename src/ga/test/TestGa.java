@@ -10,7 +10,6 @@ import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.Point;
-import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
@@ -44,6 +43,7 @@ public class TestGa extends Application {
   private GaMat targetMat;  // 目標とする画像
   private final String targetImagePath = "./image/lena.jpg";
   private GaMat viewMat;
+  private double[] targetHist;
   /* 計算メインスレッド */
   private ExecutorService calcMainService;
   private Task<Boolean> task;
@@ -55,20 +55,29 @@ public class TestGa extends Application {
   private static final int fxImageWidth = 128;
   private static final int fxImageHeight = 128;
   /* GAパラメタ */
-  private static final int loopNum = 300;
+  private static final int GENERATION_MAX = 1000;
   private static final int generationSize = 20;
   private static final int imgWidth = 128;
   private static final int imgHeight = 128;
-  private static final double sigma = 0.0001;  // 突然変異確率
   private List<GaMat> matList = new ArrayList<GaMat>();
   private List<GaMat> nextGenList = new ArrayList<GaMat>();
   private static final int selectionSimilarityLank = 50;
   private static final int nonCombinationNum = 2; //交叉せずそのまま次世代に渡す数
+  private static final int MUTATION_MAX_LINE_LENGTH = 30;
+  private static final int MUTATION_MAX_LINE_THICK = 3;
+  private static final double MUTATION_RATE = 0.75;  // 突然変異確率
+  private static int HIST_SIZE = 64;
+
 
 
   @Override
   public void start(Stage primaryStage) throws Exception {
     targetMat  = new GaMat( Imgcodecs.imread(targetImagePath) );
+
+    // ヒストグラムを取得
+    targetHist = new double[HIST_SIZE];
+    UtilImage.calcHistgramNorm(targetMat.getImg(), targetHist);
+
     calcMainService = Executors.newSingleThreadExecutor();
     task = new GaCalcTask<Boolean>();
 
@@ -106,24 +115,31 @@ public class TestGa extends Application {
       // 初期化処理
       initGa();
 
-      for ( int i = 0; i < loopNum; i++ ){
+      for ( int i = 0; i < GENERATION_MAX; i++ ){
+
+        System.out.println("loop:" + i );
 
         // メイン処理
         // 選択
+        System.out.println(" selection, ");
         selection();
 
         // 次世代の最適画像を描画
+        System.out.print(" score:" + nextGenList.get(0).getScore());
         viewMat.setImg(nextGenList.get(0).getImg().clone());
 
         // 交叉
+        System.out.print(" recombination, ");
         recombination();
 
         // 突然変異
+        System.out.println(" mutaiton.");
+        mutation();
 
 
         // 描画画像の更新
         Platform.runLater(() -> imView.setImage(UtilImage.createFxImage(viewMat.getImg(), fxImageWidth, fxImageHeight)));
-        Thread.sleep(10);
+        Thread.sleep(30);
       }
 
       return true;
@@ -172,17 +188,22 @@ public class TestGa extends Application {
       gaMat.calcDiscriptor();
       gaMat.calcMatchesList(targetMat.getDescriptors());
       gaMat.calcSimilarity(selectionSimilarityLank);
-      sum += gaMat.getSimilarity();
+      System.out.println(" similarity:" + gaMat.getSimilarity());
+
     }
+
+
     // スコアを計算
-    for ( GaMat gaMat : matList ) {
-      gaMat.setScore( (sum - gaMat.getSimilarity())/sum );
-    }
+    calcScore(matList);
     Collections.sort(matList);
+
+
 
     // 上位が選ばれやすいように次の世代に渡す
     nextGenList.clear();
-    for ( int i = 0; i < generationSize; i++ ){
+
+
+    while ( nextGenList.size() < generationSize  ) {
       double val = Math.random();
       double tmpVal = 0;
       for ( GaMat gaMat : matList ){
@@ -196,10 +217,25 @@ public class TestGa extends Application {
 
       // スコアの再計算
       calcScore(matList);
+
     }
+
+    System.out.println("selection." + " no4 matList size():" + matList.size());
+//    for ( GaMat ga : matList ) {
+//      System.out.println(" oldGeneration score:"  + ga.getScore());
+//    }
+
 
     // ソート
     Collections.sort(nextGenList);
+
+    System.out.println("selection." + " no5. nextGenList size():" + nextGenList.size());
+
+    for ( GaMat ga : nextGenList ) {
+      System.out.println(" next score:"  + ga.getScore());
+    }
+
+
 
   }
 
@@ -211,8 +247,19 @@ public class TestGa extends Application {
     for ( GaMat gaMat : list) {
       tmpSum += gaMat.getSimilarity();
     }
-    for ( GaMat gaMat : list) {
-      gaMat.setScore( (tmpSum - gaMat.getSimilarity())/tmpSum );
+
+    if ( tmpSum != 0 ) {
+      for ( GaMat gaMat : list ) {
+        gaMat.setScore( (tmpSum - gaMat.getSimilarity())/tmpSum );
+//        if ( gaMat.getSimilarity() != 0 ) {
+//        } else {
+//          gaMat.setScore(0);
+//        }
+      }
+    } else {
+      for ( GaMat gaMat : list ) {
+        gaMat.setScore( 1 / (double)list.size()  );
+      }
     }
   }
 
@@ -224,6 +271,8 @@ public class TestGa extends Application {
 
     // スコアの再計算
     calcScore(nextGenList);
+
+    matList.clear();
 
     // 上位は交叉せず次世代に進む
     for ( int i = 0; i < nonCombinationNum ; i++ ) {
@@ -237,44 +286,14 @@ public class TestGa extends Application {
       int[] numbers = getPairNum(nextGenList);
 
       // 交叉処理
-      createRecombinationMat(nextGenList.get(numbers[0]), nextGenList.get(numbers[1]), matList);
-
+      Mat dst1 = new Mat();
+      Mat dst2 = new Mat();
+      UtilImage.createRecombinationMat(nextGenList.get(numbers[0]).getImg(), nextGenList.get(numbers[1]).getImg(),
+          dst1, dst2);
+      matList.add(new GaMat(dst1));
+      matList.add(new GaMat(dst2));
     }
 
-  }
-
-  /**
-   * 交叉処理を行い、結果をdstList配列にaddします。
-   * @param src1 : 画像1
-   * @param src2 : 画像2
-   * @param dstList : 出力格納用list
-   */
-  private void createRecombinationMat(GaMat src1, GaMat src2, List<GaMat> dstList) {
-
-    Point start = UtilImage.makeRandomPoint(new Point(0, 0), new Point(src1.getImg().width(), src1.getImg().height()));
-    int width = (int) (Math.random() * ( src1.getImg().width() - start.x ) );
-    int height = (int) (Math.random() * ( src1.getImg().height() - start.y ) );
-    Rect rect = new Rect((int)start.x, (int)start.y, width, height);
-    Mat roiMat1 = new Mat(src1.getImg(), rect);
-    Mat roiMat2 = new Mat(src2.getImg(), rect);
-
-    // TODO : 動作検証
-
-    // ROIと同じ
-    Mat mask = new Mat(src1.getImg().width(), src1.getImg().height(), CvType.CV_8UC1, new Scalar(0));
-    Imgproc.rectangle(mask, start, new Point(start.x + width, start.y + height), new Scalar(255), -1);
-
-    // 生成1
-    Mat dst1 = src1.getImg().clone();
-    roiMat2.copyTo(dst1, mask);
-
-    // 生成2
-    Mat dst2 = src2.getImg().clone();
-    roiMat1.copyTo(dst2, mask);
-
-    // 結果の格納
-    dstList.add( new GaMat(dst1) );
-    dstList.add( new GaMat(dst2) );
   }
 
 
@@ -287,8 +306,8 @@ public class TestGa extends Application {
   private int[] getPairNum(List<GaMat> list) {
     int[] ret = new int[2];
     int size = list.size();
-    double[] similarity = new double[size];
-    double[] score = new double[size];
+    double[] similarity = new double[size];   // 類似度
+    double[] score = new double[size];         // 類似度を正規化したもの
 
     double sum = 0;
     for ( int i = 0; i < size; i++ ) {
@@ -303,8 +322,8 @@ public class TestGa extends Application {
     double rate = Math.random();
     double rateSum = 0;
     for ( int i = 0; i < size; i++ ) {
-      rateSum += similarity[i];
-      if ( rateSum < score[i]) {
+      rateSum += score[i];
+      if ( rate < rateSum) {
         ret[0] = i;
       }
     }
@@ -326,8 +345,8 @@ public class TestGa extends Application {
     rate = Math.random();
     rateSum = 0;
     for ( int i = 0; i < size; i++ ) {
-      rateSum += similarity[i];
-      if ( rateSum < score[i]) {
+      rateSum += score[i];
+      if ( rate < rateSum) {
         ret[1] = i;
       }
     }
@@ -336,6 +355,24 @@ public class TestGa extends Application {
   }
 
 
+  /**
+   * 突然変異します。
+   */
+  private void mutation() {
+
+    for (int i =0; i<matList.size(); i++) {
+      if ( MUTATION_RATE <  Math.random() ) continue;
+      Mat src = matList.get(i).getImg();
+      Point min = new Point(0, 0);
+      Point max = new Point(src.cols(), src.rows());
+
+      Point start = UtilImage.makeRandomPoint(min, max);
+      Imgproc.line(src, start , UtilImage.makeRandomPoint(start, MUTATION_MAX_LINE_LENGTH),
+          UtilImage.createRandomColorWithHistRate(targetHist),
+          (int)(Math.random() * MUTATION_MAX_LINE_THICK + 1) );
+    }
+
+  }
 
 
 

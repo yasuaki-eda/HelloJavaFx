@@ -2,6 +2,7 @@ package util;
 
 import java.io.ByteArrayInputStream;
 
+import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfByte;
@@ -228,5 +229,66 @@ public class UtilImage {
    return ret / sum ;
   }
 
+
+  /**
+   * 交叉画像を生成します。
+   * @param src1 : 入力1
+   * @param src2 : 入力2
+   * @param dst1 : 交叉結果画像1
+   * @param dst2 : 交叉結果画像2
+   */
+  public static void createRecombinationMat(Mat src1, Mat src2, Mat dst1, Mat dst2) {
+    // ランダムな矩形を生成
+    Point start = UtilImage.makeRandomPoint(new Point(0, 0), new Point(src2.rows(), src2.cols()));
+    int width = (int) (Math.random() * ( src2.rows() - start.x ) );
+    int height = (int) (Math.random() * ( src2.cols() - start.y ) );
+
+    // maskを作成
+    Mat mask = new Mat(src1.rows(), src1.cols(), CvType.CV_8UC1, new Scalar(0));
+    Imgproc.rectangle(mask, start, new Point(start.x + width, start.y + height), new Scalar(255), -1);
+    Mat maskNot = new Mat(src1.rows(), src1.cols(), CvType.CV_8UC1);
+    Core.bitwise_not(mask, maskNot);
+
+    Mat dst11 = new Mat();
+    src1.copyTo(dst1, mask);
+    src1.copyTo(dst11, maskNot);
+
+    Mat dst21 = new Mat();
+    src2.copyTo(dst2, mask);
+    src2.copyTo(dst21, maskNot);
+
+    Core.add(dst1, dst21, dst1);
+    Core.add(dst2, dst11, dst2);
+
+  }
+
+  /**
+   * histgramの比率に応じたランダムな色を作成します。
+   * @param hist double[64] BGRは4階調ずつ
+   * @return
+   */
+  public static Scalar createRandomColorWithHistRate(double[] hist ) {
+
+    double rand = Math.random();
+    int binNo = 0;
+    double sum = 0;
+    for ( int i = 0; i < hist.length; i++ ) {
+      sum += hist[i];
+      if ( rand < sum ) {
+        binNo = i;
+        break;
+      }
+    }
+
+    int blueNo = (binNo % 4) ;
+    int greenNo = ( (( binNo - blueNo ) / 4 )  % 4 ) ;
+    int redNo =(  (( binNo - blueNo - greenNo * 4 ) / 16 ) % 4 ) ;
+
+    blueNo = blueNo * 64 + 32 ;
+    greenNo = greenNo * 64 + 32 ;
+    redNo = redNo * 64 + 32;
+
+    return new Scalar(blueNo, greenNo, redNo);
+  }
 
 }

@@ -21,7 +21,10 @@ public class DMatComparator implements Comparator<DMatch> {
       return 0;
     }
     if ( o2 == null ) return 1;
-    return (int) (o1.distance - o2.distance);
+
+    if ( o1.distance < o2.distance ) return -1;
+    if ( o2.distance < o1.distance ) return 1;
+    return 0;
   }
 
 }
