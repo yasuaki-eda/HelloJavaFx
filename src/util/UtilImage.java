@@ -73,6 +73,10 @@ public class UtilImage {
     if ( size < 0 ) size = 0;
     rotMat = Imgproc.getRotationMatrix2D(center, angle, size);
     Imgproc.warpAffine(src, dst, rotMat, dst.size());
+
+    // 後始末
+    rotMat.release();
+
     return dst;
   }
 
@@ -259,6 +263,12 @@ public class UtilImage {
 
     Core.add(dst1, dst21, dst1);
     Core.add(dst2, dst11, dst2);
+
+    // 後始末
+    mask.release();
+    maskNot.release();
+    dst11.release();
+    dst21.release();
 
   }
 

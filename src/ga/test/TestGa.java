@@ -56,7 +56,7 @@ public class TestGa extends Application {
   private static final int fxImageWidth = 128;
   private static final int fxImageHeight = 128;
   /* GAパラメタ */
-  private static final int GENERATION_MAX = 1000;
+  private static final int GENERATION_MAX = 1000000;
   private static final int generationSize = 20;
   private static final int imgWidth = 128;
   private static final int imgHeight = 128;
@@ -142,7 +142,12 @@ public class TestGa extends Application {
 
         // 描画画像の更新
         Platform.runLater(() -> imView.setImage(UtilImage.createFxImage(viewMat.getImg(), fxImageWidth, fxImageHeight)));
-        Thread.sleep(30);
+
+        if ( i % 1000 == 0 ) {
+          Thread.sleep(300);
+        } else {
+          Thread.sleep(10);
+        }
       }
 
       return true;
@@ -283,6 +288,11 @@ public class TestGa extends Application {
     // スコアの再計算
     calcScore(nextGenList);
 
+
+    // リストのクリア、メモリの解放
+    for ( GaMat gaMat : matList ) {
+      gaMat.getImg().release();
+    }
     matList.clear();
 
     // 上位は交叉せず次世代に進む
@@ -304,6 +314,10 @@ public class TestGa extends Application {
       matList.add(new GaMat(dst1));
       matList.add(new GaMat(dst2));
     }
+
+    // nextGenListの解放(メモリリーク対応)
+    nextGenList.clear();
+
 
   }
 
@@ -346,7 +360,7 @@ public class TestGa extends Application {
     }
     for ( int i = 0; i < size; i++ ) {
       if ( i == ret[0] ) {
-        score[i] = 0;
+        score[i] = 0.00000001;
       } else {
         score[i] =  similarity[i] / sum;
       }
