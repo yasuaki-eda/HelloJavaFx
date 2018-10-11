@@ -134,6 +134,7 @@ public class UtilImage {
   /**
    * ヒストグラムのbin番号を計算します。
    * 1色あたり4階調 ^ 3色 = 64のbin番号に振り分けます。
+   * CV_8UC3の値域は [-127,127]だがScalorとの関係は、0⇒0、128⇒-127、255⇒-1になる。
    * @param blue : 値域 [-127, 127]
    * @param green : 値域 [-127, 127]
    * @param red : 値域 [-127, 127]
@@ -206,7 +207,6 @@ public class UtilImage {
     for ( int i=0 ; i < COLOR_GRADATION_LEVEL; i++ ) {
       hist[i] = hist[i] / count;
     }
-
   }
 
 

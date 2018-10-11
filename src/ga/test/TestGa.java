@@ -43,7 +43,8 @@ public class TestGa extends Application {
   private GaMat targetMat;  // 目標とする画像
   private final String targetImagePath = "./image/lena.jpg";
   private GaMat viewMat;
-  private double[] targetHist;
+  private double[] targetHistNorm;
+  private int[] targetHist;
   /* 計算メインスレッド */
   private ExecutorService calcMainService;
   private Task<Boolean> task;
@@ -75,8 +76,10 @@ public class TestGa extends Application {
     targetMat  = new GaMat( Imgcodecs.imread(targetImagePath) );
 
     // ヒストグラムを取得
-    targetHist = new double[HIST_SIZE];
-    UtilImage.calcHistgramNorm(targetMat.getImg(), targetHist);
+    targetHistNorm = new double[HIST_SIZE];
+    targetHist = new int[HIST_SIZE];
+    UtilImage.calcHistgram(targetMat.getImg(), targetHist);
+    UtilImage.calcHistgramNorm(targetMat.getImg(), targetHistNorm);
 
     calcMainService = Executors.newSingleThreadExecutor();
     task = new GaCalcTask<Boolean>();
@@ -125,7 +128,7 @@ public class TestGa extends Application {
         selection();
 
         // 次世代の最適画像を描画
-        System.out.print(" score:" + nextGenList.get(0).getScore());
+        System.out.print(" score:" + nextGenList.get(0).getScore() + " similarity:" + nextGenList.get(0).getSimilarity());
         viewMat.setImg(nextGenList.get(0).getImg().clone());
 
         // 交叉
@@ -187,21 +190,17 @@ public class TestGa extends Application {
     for ( GaMat gaMat : matList ){
       gaMat.calcDiscriptor();
       gaMat.calcMatchesList(targetMat.getDescriptors());
-      gaMat.calcSimilarity(selectionSimilarityLank);
-      System.out.println(" similarity:" + gaMat.getSimilarity());
-
+      gaMat.calcSimilarity(selectionSimilarityLank, targetHist);
+//      System.out.println(" similarity:" + gaMat.getSimilarity());
     }
-
 
     // スコアを計算
     calcScore(matList);
     Collections.sort(matList);
 
 
-
     // 上位が選ばれやすいように次の世代に渡す
     nextGenList.clear();
-
 
     while ( nextGenList.size() < generationSize  ) {
       double val = Math.random();
@@ -217,7 +216,6 @@ public class TestGa extends Application {
 
       // スコアの再計算
       calcScore(matList);
-
     }
 
     System.out.println("selection." + " no4 matList size():" + matList.size());
@@ -231,9 +229,11 @@ public class TestGa extends Application {
 
     System.out.println("selection." + " no5. nextGenList size():" + nextGenList.size());
 
-    for ( GaMat ga : nextGenList ) {
-      System.out.println(" next score:"  + ga.getScore());
-    }
+    // debug用再計算
+    calcScore(nextGenList);
+//    for ( GaMat ga : nextGenList ) {
+//      System.out.println(" next score:"  + ga.getScore() + " similarity:" + ga.getSimilarity());
+//    }
 
 
 
@@ -243,6 +243,13 @@ public class TestGa extends Application {
    *  GaMatリストのスコアを計算 & セットします。
    */
   private void calcScore(List<GaMat> list) {
+
+    if ( list.size() == 1 ) {
+      list.get(0).setScore(0.000001);
+      return;
+    }
+
+
     double tmpSum = 0;
     for ( GaMat gaMat : list) {
       tmpSum += gaMat.getSimilarity();
@@ -250,7 +257,9 @@ public class TestGa extends Application {
 
     if ( tmpSum != 0 ) {
       for ( GaMat gaMat : list ) {
-        gaMat.setScore( (tmpSum - gaMat.getSimilarity())/tmpSum );
+        gaMat.setScore( gaMat.getSimilarity()/tmpSum );
+
+
 //        if ( gaMat.getSimilarity() != 0 ) {
 //        } else {
 //          gaMat.setScore(0);
@@ -261,6 +270,8 @@ public class TestGa extends Application {
         gaMat.setScore( 1 / (double)list.size()  );
       }
     }
+
+
   }
 
 
@@ -315,7 +326,7 @@ public class TestGa extends Application {
       sum += similarity[i];
     }
     for ( int i = 0; i < size; i++ ) {
-      score[i] = ( sum - similarity[i] ) / sum;
+      score[i] =  similarity[i] / sum;
     }
 
     // 1回目の抽選
@@ -337,7 +348,7 @@ public class TestGa extends Application {
       if ( i == ret[0] ) {
         score[i] = 0;
       } else {
-        score[i] = ( sum - similarity[i] ) / sum;
+        score[i] =  similarity[i] / sum;
       }
     }
 
@@ -368,7 +379,7 @@ public class TestGa extends Application {
 
       Point start = UtilImage.makeRandomPoint(min, max);
       Imgproc.line(src, start , UtilImage.makeRandomPoint(start, MUTATION_MAX_LINE_LENGTH),
-          UtilImage.createRandomColorWithHistRate(targetHist),
+          UtilImage.createRandomColorWithHistRate(targetHistNorm),
           (int)(Math.random() * MUTATION_MAX_LINE_THICK + 1) );
     }
 
