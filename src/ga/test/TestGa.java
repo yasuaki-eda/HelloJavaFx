@@ -7,12 +7,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import org.opencv.core.Core;
-import org.opencv.core.CvType;
 import org.opencv.core.Mat;
-import org.opencv.core.Point;
-import org.opencv.core.Scalar;
 import org.opencv.imgcodecs.Imgcodecs;
-import org.opencv.imgproc.Imgproc;
 
 import ga.common.GaMat;
 import javafx.application.Application;
@@ -56,7 +52,7 @@ public class TestGa extends Application {
   private static final int fxImageWidth = 128;
   private static final int fxImageHeight = 128;
   /* GAパラメタ */
-  private static final int GENERATION_MAX = 1000000;
+  private static final int GENERATION_MAX = 100000;
   private static final int generationSize = 20;
   private static final int imgWidth = 128;
   private static final int imgHeight = 128;
@@ -64,8 +60,8 @@ public class TestGa extends Application {
   private List<GaMat> nextGenList = new ArrayList<GaMat>();
   private static final int selectionSimilarityLank = 50;
   private static final int nonCombinationNum = 2; //交叉せずそのまま次世代に渡す数
-  private static final int MUTATION_MAX_LINE_LENGTH = 30;
-  private static final int MUTATION_MAX_LINE_THICK = 3;
+  private static final int MUTATION_MAX_LINE_LENGTH = 10;
+  private static final int MUTATION_MAX_LINE_THICK = 2;
   private static final double MUTATION_RATE = 0.75;  // 突然変異確率
   private static int HIST_SIZE = 64;
 
@@ -175,7 +171,18 @@ public class TestGa extends Application {
    */
   private void addInitImage(int num, List<GaMat> list) {
     for ( int i = 0; i< num; i++ ){
-      list.add(new GaMat(  new Mat(imgWidth, imgHeight, CvType.CV_8UC3, new Scalar(0, 0, 0))));
+//      list.add(new GaMat(  new Mat(imgWidth, imgHeight, CvType.CV_8UC3, new Scalar(0, 0, 0))));
+//        list.add(new GaMat(
+//            UtilImage.createRandomImageFromHist(targetMat.getImg().cols() , targetMat.getImg().rows(), targetHistNorm)));
+
+//      list.add(new GaMat(
+//            UtilImage.createRandomImageFromHist(
+//                targetMat.getImg().cols(), targetMat.getImg().rows(), targetHistNorm, 30000, 20, 3)
+//          ));
+      list.add(new GaMat(
+          UtilImage.createRandomImageFromHist(
+              imgWidth, imgHeight, targetHistNorm, 10000, 10, 3, 0.5)
+        ));
     }
   }
 
@@ -301,7 +308,7 @@ public class TestGa extends Application {
     }
 
     // 2つを選択し交叉
-    for (int i = 0; i < generationSize  - nonCombinationNum; i++ ) {
+    for (int i = 0; i <= generationSize  - nonCombinationNum; i++ ) {
 
       // 2つを選択
       int[] numbers = getPairNum(nextGenList);
@@ -315,8 +322,17 @@ public class TestGa extends Application {
       matList.add(new GaMat(dst2));
     }
 
-    // nextGenListの解放(メモリリーク対応)
+    // nextGenListの解放
+    a : for ( GaMat ga1 : nextGenList ) {
+      for ( GaMat ga2 : matList ) {
+        if ( ga1.equals(ga2) ) {
+          continue a;
+        }
+      }
+      ga1.getImg().release();
+    }
     nextGenList.clear();
+
 
 
   }
@@ -388,13 +404,16 @@ public class TestGa extends Application {
     for (int i =0; i<matList.size(); i++) {
       if ( MUTATION_RATE <  Math.random() ) continue;
       Mat src = matList.get(i).getImg();
-      Point min = new Point(0, 0);
-      Point max = new Point(src.cols(), src.rows());
+//      Point min = new Point(0, 0);
+//      Point max = new Point(src.cols(), src.rows());
+//
+//      Point start = UtilImage.makeRandomPoint(min, max);
+//      Imgproc.line(src, start , UtilImage.makeRandomPoint(start, MUTATION_MAX_LINE_LENGTH),
+//          UtilImage.createRandomColorWithHistRate(targetHistNorm),
+//          (int)(Math.random() * MUTATION_MAX_LINE_THICK + 1) );
 
-      Point start = UtilImage.makeRandomPoint(min, max);
-      Imgproc.line(src, start , UtilImage.makeRandomPoint(start, MUTATION_MAX_LINE_LENGTH),
-          UtilImage.createRandomColorWithHistRate(targetHistNorm),
-          (int)(Math.random() * MUTATION_MAX_LINE_THICK + 1) );
+      UtilImage.createRandomImageFromHist(src, targetHistNorm, MUTATION_MAX_LINE_LENGTH, MUTATION_MAX_LINE_THICK, 0.5);
+
     }
 
   }

@@ -115,6 +115,36 @@ public class UtilImage {
     return new Scalar(blue, green, red);
   }
 
+  /**
+   * 線分の終点を起点としたランダムな点を出力します。
+   * ただし、線分の向いている方向(-π/2<=x<=π/2)に限定します。
+   * @param start
+   * @param end
+   * @param maxLength
+   * @return
+   */
+  public static Point makeRandomPoint(Point start, Point end, double maxLength) {
+    double angle = Math.random() * Math.PI - Math.PI /2;  // -π/2 <= angle <= π/2
+    double length = Math.random() * maxLength;
+
+    // start-end線分のなす角
+    double x1 = end.x - start.x;
+    double y1 = end.y - start.y;
+
+    if ( x1 == 0 ) {
+      // 何もしない
+    } else if ( y1 == 0 ) {
+      angle += Math.PI / 2;
+    } else {
+      angle += Math.atan2(y1, x1);
+    }
+
+    int x = (int)( end.x + length * Math.cos(angle) );
+    int y = (int)( end.y + length * Math.sin(angle) );
+    return new Point(x, y);
+
+  }
+
 
 
   /**
@@ -300,5 +330,145 @@ public class UtilImage {
 
     return new Scalar(blueNo, greenNo, redNo);
   }
+
+
+  /**
+   * ヒストグラムの割合で重みを付けたランダムな色による
+   * ランダムな画像を生成します。
+   * @param width
+   * @param height
+   * @param hist
+   * @return
+   */
+  public static Mat createRandomImageFromHist(int width, int height, double[] hist) {
+    Mat dst = new Mat(width, height, CvType.CV_8UC3);
+    Scalar color = null;
+
+    for ( int y = 0; y < dst.height(); y++ ) {
+      for ( int x = 0; x < dst.width(); x++ ) {
+
+        color = UtilImage.createRandomColorWithHistRate(hist);
+        double colVal[]  = color.val;
+
+        if ( 255 < colVal[0] ) colVal[0] -= 256;
+        if ( 255 < colVal[1] ) colVal[1] -= 256;
+        if ( 255 < colVal[2] ) colVal[2] -= 256;
+
+        byte[] data = new byte[3];
+        data[0] =  (byte) colVal[0];
+        data[1] = (byte)colVal[1];
+        data[2] = (byte)colVal[2];
+        dst.put(y, x, data);
+
+      }
+    }
+    return dst;
+  }
+
+  /**
+   * ヒストグラムの割合で重みを付けたランダムな色による、
+   * ランダムな線分の重ね合わせによるランダムな画像を作成します。
+   * @param width
+   * @param height
+   * @param hist
+   * @param lineNum
+   * @param maxLineLength
+   * @param maxLineTickness
+   * @return
+   */
+  public static Mat createRandomImageFromHist(int width, int height, double[] hist,
+      int lineNum, int maxLineLength, int maxLineTickness) {
+    Mat dst = new Mat(width, height, CvType.CV_8UC3);
+    Point min = new Point(0, 0);
+    Point max = new Point(width, height);
+
+    for ( int i = 0; i < lineNum; i++ ) {
+      Point start = UtilImage.makeRandomPoint(min, max);
+      Imgproc.line(dst, start , UtilImage.makeRandomPoint(start, maxLineLength),
+          UtilImage.createRandomColorWithHistRate(hist),
+          (int)(Math.random() * maxLineTickness + 1) );
+    }
+    return dst;
+  }
+
+  /**
+   * ヒストグラムの割合で重みを付けたランダムな色による、
+   * ランダムな線分の重ね合わせによるランダムな画像を作成します。
+   * @param width : 出力画像サイズ
+   * @param height : 出力画像サイズ
+   * @param hist : 色生成のためのヒストグラム
+   * @param loopNum : 処理回数
+   * @param maxLineLength : 線分の最大長さ
+   * @param maxLineTickness : 線分の最大太さ
+   * @param nextLineRate : 1ループ内で次の線分を引く確率(初期値1/2)
+   * @return
+   */
+  public static Mat createRandomImageFromHist(int width, int height, double[] hist,
+      int loopNum, int maxLineLength, int maxLineTickness, double nextLineRate) {
+    Mat dst = new Mat(width, height, CvType.CV_8UC3);
+    Point min = new Point(0, 0);
+    Point max = new Point(width, height);
+    if ( nextLineRate < 0 || 1 <= nextLineRate ) nextLineRate = 0.5;
+
+    for ( int i = 0; i < loopNum; i++ ) {
+      Point start = UtilImage.makeRandomPoint(min, max);
+      Point end = UtilImage.makeRandomPoint(start, maxLineLength);
+      Scalar color = UtilImage.createRandomColorWithHistRate(hist);
+
+      Imgproc.line(dst, start , end, color,
+          (int)(Math.random() * maxLineTickness + 1) );
+
+      Point oldStart = start;
+      Point nextStart = end;
+      Point nextEnd;
+
+      // 続けて次の線分を引く
+      while ( Math.random() < nextLineRate ) {
+        nextEnd = makeRandomPoint(oldStart, nextStart, maxLineLength);
+        Imgproc.line(dst, nextStart, nextEnd, color,
+            (int)(Math.random() * maxLineTickness + 1) );
+        oldStart = nextStart;
+        nextStart = nextEnd;
+      }
+    }
+    return dst;
+  }
+
+  /**
+   * ヒストグラムの割合で重みを付けたランダムな色による、
+   * 折れ線を画像に書き込みます。
+   * @param src
+   * @param hist
+   * @param maxLineLength
+   * @param maxLineTickness
+   * @param nextLineRate
+   */
+  public static void createRandomImageFromHist(Mat src, double[] hist,
+      int maxLineLength, int maxLineTickness, double nextLineRate) {
+    Point min = new Point(0, 0);
+    Point max = new Point(src.cols(), src.rows());
+    if ( nextLineRate < 0 || 1 <= nextLineRate ) nextLineRate = 0.5;
+
+    Point start = UtilImage.makeRandomPoint(min, max);
+    Point end = UtilImage.makeRandomPoint(start, maxLineLength);
+    Scalar color = UtilImage.createRandomColorWithHistRate(hist);
+
+    Imgproc.line(src, start , end, color, (int)(Math.random() * maxLineTickness + 1) );
+
+    Point oldStart = start;
+    Point nextStart = end;
+    Point nextEnd;
+
+    // 続けて次の線分を引く
+    while ( Math.random() < nextLineRate ) {
+      nextEnd = makeRandomPoint(oldStart, nextStart, maxLineLength);
+      Imgproc.line(src, nextStart, nextEnd, color, (int)(Math.random() * maxLineTickness + 1) );
+      oldStart = nextStart;
+      nextStart = nextEnd;
+    }
+
+  }
+
+
 
 }

@@ -12,8 +12,6 @@ import org.opencv.features2d.DescriptorMatcher;
 import org.opencv.features2d.FeatureDetector;
 import org.opencv.imgproc.Imgproc;
 
-import util.UtilImage;
-
 /**
  * GA計算用に特徴量や類似度を保持するように拡張したMatです。
  * @author eda
@@ -30,7 +28,7 @@ public class GaMat implements Comparable<GaMat> {
   private double similarity = 0;
   private double score;   // 集団の中におけるスコア(集団全体の合計が1になる)
   private static double LESS_MATCHES_PENALTY = 10000;
-  private static double LESS_HIST_PENALTY = 10000;
+  private static double LESS_HIST_PENALTY = 100;
 
   /**
    * コンストラクタ
@@ -52,13 +50,15 @@ public class GaMat implements Comparable<GaMat> {
     detector.detect(gray, keyPoint01);
     executor.compute(gray, keyPoint01, descriptors);
 
+    // 後始末
+    gray.release();
+
   }
 
   /**
    * 参照画像との類似度を計算します。
    * 特徴量計算後に実行する必要があります。
    * 類似度Listは類似度が高い順にソートします。
-   * TODO : 色のヒストグラム類似度も導入する。
    * @param src
    */
   public void calcMatchesList(Mat descriptor1){
@@ -97,10 +97,10 @@ public class GaMat implements Comparable<GaMat> {
     }
 
     // ヒストグラムによる類似度
-    int[] hist = new int[targetHist.length];
-    UtilImage.calcHistgram(this.getImg(), hist);
-    double histSimilarity = UtilImage.calcHistgramIntersection(hist, targetHist);
-    similarity += (1 - histSimilarity) * LESS_HIST_PENALTY;
+//    int[] hist = new int[targetHist.length];
+//    UtilImage.calcHistgram(this.getImg(), hist);
+//    double histSimilarity = UtilImage.calcHistgramIntersection(hist, targetHist);
+//    similarity += (1 - histSimilarity) * LESS_HIST_PENALTY;
 
     similarity /= lank;
 
