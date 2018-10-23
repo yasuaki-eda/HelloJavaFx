@@ -108,6 +108,33 @@ public class GaMat implements Comparable<GaMat> {
     similarity = 1 / similarity;
   }
 
+
+  /**
+   * 類似度を計算します。
+   * ピクセル同士比較して、同じ色の場合+1、異なる場合0とします。
+   * 一致しているときにsimilarity=1、0に近いほど外れている。
+   * @param targetMat : imageと同じサイズの目標画像
+   */
+  public void calcSimilarity(Mat targetMat){
+
+    similarity = 1;
+    for ( int y = 0; y < this.img.rows(); y++ ) {
+      for ( int x = 0; x < this.img.cols(); x++ ) {
+        byte[] data = new byte[3];
+        byte[] data2 = new byte[3];
+        targetMat.get(y,  x, data);
+        img.get(y,  x, data2);
+        if ( data[0] == data2[0] && data[1] == data2[1] && data[2] == data2[2] ) {
+          similarity++;
+        }
+      }
+    }
+
+    // 値域を(0, 1]にする(similarity=0は取らない)
+    similarity = similarity / (double)( img.rows() * img.cols() + 1);
+  }
+
+
   public double getSimilarity(){
     return similarity;
   }

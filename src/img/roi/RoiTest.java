@@ -1,8 +1,12 @@
 package img.roi;
 
 import org.opencv.core.Core;
+import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.core.Point;
+import org.opencv.core.Scalar;
 import org.opencv.imgcodecs.Imgcodecs;
+import org.opencv.imgproc.Imgproc;
 
 import javafx.application.Application;
 import javafx.scene.Scene;
@@ -38,33 +42,37 @@ public class RoiTest extends Application {
 
   private void createDstMat() {
 
-//    // ランダムな矩形を生成
-//    Point start = UtilImage.makeRandomPoint(new Point(0, 0), new Point(src2.rows(), src2.cols()));
-//    int width = (int) (Math.random() * ( src2.rows() - start.x ) );
-//    int height = (int) (Math.random() * ( src2.cols() - start.y ) );
-//
-//    // maskを作成
-//    Mat mask = new Mat(src1.rows(), src1.cols(), CvType.CV_8UC1, new Scalar(0));
-//    Imgproc.rectangle(mask, start, new Point(start.x + width, start.y + height), new Scalar(255), -1);
-//    Mat maskNot = new Mat(src1.rows(), src1.cols(), CvType.CV_8UC1);
-//    Core.bitwise_not(mask, maskNot);
-//
-//    dst1 = new Mat();
-//    Mat dst11 = new Mat();
-//    src1.copyTo(dst1, mask);
-//    src1.copyTo(dst11, maskNot);
-//
-//    dst2 = new Mat();
-//    Mat dst21 = new Mat();
-//    src2.copyTo(dst2, mask);
-//    src2.copyTo(dst21, maskNot);
-//
-//    Core.add(dst1, dst21, dst1);
-//    Core.add(dst2, dst11, dst2);
+    // ランダムな矩形を生成
+
+    // maskを作成
+    Mat mask = new Mat(src1.rows(), src1.cols(), CvType.CV_8UC1, new Scalar(0));
+    Mat maskNot = new Mat(src1.rows(), src1.cols(), CvType.CV_8UC1);
+
+    for ( int i = 0; i< 10; i ++ ) {
+      Point start = UtilImage.makeRandomPoint(new Point(0, 0), new Point(src2.rows(), src2.cols()));
+      int width = (int) (Math.random() * ( src2.rows() - start.x ) );
+      int height = (int) (Math.random() * ( src2.cols() - start.y ) );
+      Imgproc.rectangle(mask, start, new Point(start.x + width, start.y + height), new Scalar(255), -1);
+      Core.bitwise_not(mask, maskNot);
+    }
+
 
     dst1 = new Mat();
+    Mat dst11 = new Mat();
+    src1.copyTo(dst1, mask);
+    src1.copyTo(dst11, maskNot);
+
     dst2 = new Mat();
-    UtilImage.createRecombinationMat(src1, src2, dst1, dst2);
+    Mat dst21 = new Mat();
+    src2.copyTo(dst2, mask);
+    src2.copyTo(dst21, maskNot);
+
+    Core.add(dst1, dst21, dst1);
+    Core.add(dst2, dst11, dst2);
+
+//    dst1 = new Mat();
+//    dst2 = new Mat();
+//    UtilImage.createRecombinationMat(src1, src2, dst1, dst2);
 
   }
 

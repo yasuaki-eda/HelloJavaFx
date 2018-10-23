@@ -8,7 +8,9 @@ import java.util.concurrent.Executors;
 
 import org.opencv.core.Core;
 import org.opencv.core.Mat;
+import org.opencv.core.Size;
 import org.opencv.imgcodecs.Imgcodecs;
+import org.opencv.imgproc.Imgproc;
 
 import ga.common.GaMat;
 import javafx.application.Application;
@@ -52,24 +54,35 @@ public class TestGa extends Application {
   private static final int fxImageWidth = 128;
   private static final int fxImageHeight = 128;
   /* GAパラメタ */
-  private static final int GENERATION_MAX = 100000;
-  private static final int generationSize = 20;
+  private static final int GENERATION_MAX = 100000;   // 計算する世代数
+  private static final int generationSize = 200;
   private static final int imgWidth = 128;
   private static final int imgHeight = 128;
   private List<GaMat> matList = new ArrayList<GaMat>();
   private List<GaMat> nextGenList = new ArrayList<GaMat>();
   private static final int selectionSimilarityLank = 50;
-  private static final int nonCombinationNum = 2; //交叉せずそのまま次世代に渡す数
+  private static final int nonCombinationNum = 5; //交叉せずそのまま次世代に渡す数
   private static final int MUTATION_MAX_LINE_LENGTH = 10;
   private static final int MUTATION_MAX_LINE_THICK = 2;
-  private static final double MUTATION_RATE = 0.75;  // 突然変異確率
+  private static final int MUTATION_LINE_NUM = 2;    // 突然変異1回につき追記する線の数
+  private static final double MUTATION_RATE = 0.10;  // 突然変異確率
+  private static final int COMBINATION_ROI_NUM = 20;    // 交叉処理1回につき、交叉するROIの数
   private static int HIST_SIZE = 64;
 
 
 
   @Override
   public void start(Stage primaryStage) throws Exception {
-    targetMat  = new GaMat( Imgcodecs.imread(targetImagePath) );
+
+    // 減色 & 縮小する
+    Mat readMat = UtilImage.decreaseColorMat(Imgcodecs.imread(targetImagePath));
+
+    System.out.println("" + readMat.rows() + " rate:" + (double)imgWidth/readMat.rows()  );
+    Imgproc.resize(readMat, readMat, new Size(imgWidth, imgHeight));
+
+    targetMat  = new GaMat( readMat );
+//    targetMat  = new GaMat( Imgcodecs.imread(targetImagePath));
+
 
     // ヒストグラムを取得
     targetHistNorm = new double[HIST_SIZE];
@@ -150,6 +163,7 @@ public class TestGa extends Application {
     }
   }
 
+
   /**
    * GA実行前初期化関数です
    */
@@ -163,6 +177,7 @@ public class TestGa extends Application {
     targetMat.calcDiscriptor();
 
   }
+
 
   /**
    * 初期画像をlistにaddします。
@@ -200,14 +215,18 @@ public class TestGa extends Application {
 
     // 類似度を計算
     for ( GaMat gaMat : matList ){
-      gaMat.calcDiscriptor();
-      gaMat.calcMatchesList(targetMat.getDescriptors());
-      gaMat.calcSimilarity(selectionSimilarityLank, targetHist);
+      // 類似度計算方法の変更
+//      gaMat.calcDiscriptor();
+//      gaMat.calcMatchesList(targetMat.getDescriptors());
+//      gaMat.calcSimilarity(selectionSimilarityLank, targetHist);
+
+      gaMat.calcSimilarity(targetMat.getImg());
+
 //      System.out.println(" similarity:" + gaMat.getSimilarity());
     }
 
     // スコアを計算
-    calcScore(matList);
+    calcScore2(matList);
     Collections.sort(matList);
 
 
@@ -227,7 +246,7 @@ public class TestGa extends Application {
       }
 
       // スコアの再計算
-      calcScore(matList);
+      calcScore2(matList);
     }
 
     System.out.println("selection." + " no4 matList size():" + matList.size());
@@ -242,7 +261,7 @@ public class TestGa extends Application {
     System.out.println("selection." + " no5. nextGenList size():" + nextGenList.size());
 
     // debug用再計算
-    calcScore(nextGenList);
+    calcScore2(nextGenList);
 //    for ( GaMat ga : nextGenList ) {
 //      System.out.println(" next score:"  + ga.getScore() + " similarity:" + ga.getSimilarity());
 //    }
@@ -271,11 +290,6 @@ public class TestGa extends Application {
       for ( GaMat gaMat : list ) {
         gaMat.setScore( gaMat.getSimilarity()/tmpSum );
 
-
-//        if ( gaMat.getSimilarity() != 0 ) {
-//        } else {
-//          gaMat.setScore(0);
-//        }
       }
     } else {
       for ( GaMat gaMat : list ) {
@@ -288,12 +302,36 @@ public class TestGa extends Application {
 
 
   /**
+   *  GaMatリストのスコアを計算 & セットします。
+   */
+  private void calcScore2(List<GaMat> list) {
+
+    if ( list.size() == 1 ) {
+      list.get(0).setScore(0.000001);
+      return;
+    }
+
+    // similarityが高い順にソート
+    Collections.sort(matList);
+
+    double n = matList.size();
+    double a = 3 * ( n*n*n + 9*n*n + 9*n ) ;
+
+    for ( int i = 0; i < n; i++ ) {
+      double score = a / ( i - n - 1 ) / ( i - n - 1 );
+      matList.get(i).setScore(score);
+    }
+  }
+
+
+
+  /**
    * 交叉処理
    */
   private void recombination() {
 
     // スコアの再計算
-    calcScore(nextGenList);
+    calcScore2(nextGenList);
 
 
     // リストのクリア、メモリの解放
@@ -316,8 +354,12 @@ public class TestGa extends Application {
       // 交叉処理
       Mat dst1 = new Mat();
       Mat dst2 = new Mat();
+
+//      UtilImage.createRecombinationMat(nextGenList.get(numbers[0]).getImg(), nextGenList.get(numbers[1]).getImg(),
+//          dst1, dst2);
       UtilImage.createRecombinationMat(nextGenList.get(numbers[0]).getImg(), nextGenList.get(numbers[1]).getImg(),
-          dst1, dst2);
+          dst1, dst2, COMBINATION_ROI_NUM);
+
       matList.add(new GaMat(dst1));
       matList.add(new GaMat(dst2));
     }
@@ -404,15 +446,10 @@ public class TestGa extends Application {
     for (int i =0; i<matList.size(); i++) {
       if ( MUTATION_RATE <  Math.random() ) continue;
       Mat src = matList.get(i).getImg();
-//      Point min = new Point(0, 0);
-//      Point max = new Point(src.cols(), src.rows());
-//
-//      Point start = UtilImage.makeRandomPoint(min, max);
-//      Imgproc.line(src, start , UtilImage.makeRandomPoint(start, MUTATION_MAX_LINE_LENGTH),
-//          UtilImage.createRandomColorWithHistRate(targetHistNorm),
-//          (int)(Math.random() * MUTATION_MAX_LINE_THICK + 1) );
 
-      UtilImage.createRandomImageFromHist(src, targetHistNorm, MUTATION_MAX_LINE_LENGTH, MUTATION_MAX_LINE_THICK, 0.5);
+      for ( int j = 0; j < MUTATION_LINE_NUM; j++ ) {
+        UtilImage.createRandomImageFromHist(src, targetHistNorm, MUTATION_MAX_LINE_LENGTH, MUTATION_MAX_LINE_THICK, 0.5);
+      }
 
     }
 

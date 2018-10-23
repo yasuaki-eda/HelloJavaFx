@@ -272,14 +272,23 @@ public class UtilImage {
    * @param dst2 : 交叉結果画像2
    */
   public static void createRecombinationMat(Mat src1, Mat src2, Mat dst1, Mat dst2) {
+
+    final int length = 20;
+
     // ランダムな矩形を生成
     Point start = UtilImage.makeRandomPoint(new Point(0, 0), new Point(src2.rows(), src2.cols()));
-    int width = (int) (Math.random() * ( src2.rows() - start.x ) );
-    int height = (int) (Math.random() * ( src2.cols() - start.y ) );
+    Point end  = UtilImage.makeRandomPoint(start, length);
+    while( (int)start.x == (int)end.x || (int)start.y == (int)end.y  ) {
+      end  = UtilImage.makeRandomPoint(start, length);
+    }
+
+//    int width = (int) (Math.random() * ( src2.rows() - start.x ) );
+//    int height = (int) (Math.random() * ( src2.cols() - start.y ) );
 
     // maskを作成
     Mat mask = new Mat(src1.rows(), src1.cols(), CvType.CV_8UC1, new Scalar(0));
-    Imgproc.rectangle(mask, start, new Point(start.x + width, start.y + height), new Scalar(255), -1);
+//    Imgproc.rectangle(mask, start, new Point(start.x + width, start.y + height), new Scalar(255), -1);
+    Imgproc.rectangle(mask, start, end, new Scalar(255), -1);
     Mat maskNot = new Mat(src1.rows(), src1.cols(), CvType.CV_8UC1);
     Core.bitwise_not(mask, maskNot);
 
@@ -301,6 +310,53 @@ public class UtilImage {
     dst21.release();
 
   }
+
+  /**
+   * 交叉画像を生成します。
+   * @param src1 : 入力1
+   * @param src2 : 入力2
+   * @param dst1 : 交叉結果画像1
+   * @param dst2 : 交叉結果画像2
+   * @param num : 交叉回数
+   */
+  public static void createRecombinationMat(Mat src1, Mat src2, Mat dst1, Mat dst2, int num) {
+
+
+    final int length = 20;
+
+    // maskを作成
+    Mat mask = new Mat(src1.rows(), src1.cols(), CvType.CV_8UC1, new Scalar(0));
+    Mat maskNot = new Mat(src1.rows(), src1.cols(), CvType.CV_8UC1);
+
+    for ( int i = 0; i< num; i ++ ) {
+      // ランダムな矩形を生成
+      Point start = UtilImage.makeRandomPoint(new Point(0, 0), new Point(src2.rows(), src2.cols()));
+      Point end  = UtilImage.makeRandomPoint(start, length);
+      while( (int)start.x == (int)end.x || (int)start.y == (int)end.y  ) {
+        end  = UtilImage.makeRandomPoint(start, length);
+      }
+      Imgproc.rectangle(mask, start, end, new Scalar(255), -1);
+      Core.bitwise_not(mask, maskNot);
+    }
+
+    Mat dst11 = new Mat();
+    src1.copyTo(dst1, mask);
+    src1.copyTo(dst11, maskNot);
+
+    Mat dst21 = new Mat();
+    src2.copyTo(dst2, mask);
+    src2.copyTo(dst21, maskNot);
+
+    Core.add(dst1, dst21, dst1);
+    Core.add(dst2, dst11, dst2);
+
+    // 後始末
+    mask.release();
+    maskNot.release();
+    dst11.release();
+    dst21.release();
+  }
+
 
   /**
    * histgramの比率に応じたランダムな色を作成します。
